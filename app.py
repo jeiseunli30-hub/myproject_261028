@@ -3,10 +3,52 @@ import streamlit.components.v1 as components
 import pandas as pd
 from database import init_db, create_user, login_user, insert_survey_data, fetch_survey_data
 
+
+# ---------------------------------------------------------
+# 외부 웹사이트(게임)를 하나의 프레임 안에 꼭 맞게 보여주는 함수
+#  - 바깥 컴포넌트 높이와 안쪽 iframe 높이를 동일하게 맞춰
+#    이중 스크롤과 화면 잘림을 방지합니다.
+# ---------------------------------------------------------
+def embed_site(url: str, height: int = 760, title: str = "embedded") -> None:
+    # 최신 Streamlit(st.iframe 지원): URL을 바로 지정한 높이의 iframe으로 표시
+    if hasattr(st, "iframe"):
+        st.iframe(url, height=height)
+        return
+    # 구버전 Streamlit: components.html 사용 (바깥/안쪽 높이를 동일하게 맞춤)
+    components.html(
+        f"""
+        <style>
+          html, body {{ margin: 0; padding: 0; height: 100%; overflow: hidden; }}
+          iframe {{ display: block; width: 100%; height: 100%; border: 0; }}
+        </style>
+        <iframe src="{url}" title="{title}" allow="fullscreen; autoplay; gamepad" allowfullscreen></iframe>
+        """,
+        height=height,
+        scrolling=False,
+    )
+
+
+def game_page(page_title: str, url: str, key: str) -> None:
+    """게임 페이지 공통 레이아웃: 제목 + 높이 조절 + 새 창 열기 + 프레임"""
+    head_col, ctrl_col = st.columns((3, 2))
+    with head_col:
+        st.title(page_title)
+    with ctrl_col:
+        frame_h = st.slider("화면 높이(px)", 500, 1200, 760, 20, key=f"{key}_height")
+        st.link_button("🔗 새 창에서 크게 열기", url, use_container_width=True)
+    embed_site(url, height=frame_h, title=page_title)
+    st.caption("화면이 잘리면 위의 슬라이더로 높이를 조절하거나, 새 창에서 열어 보세요.")
+
 # DB 초기화 및 테이블 생성
 init_db()
 
 st.set_page_config(page_title="AI 교육 앱", layout="wide")
+
+# 게임 화면이 한 프레임 안에 잘 보이도록 기본 여백 축소
+st.markdown(
+    "<style>.block-container{padding-top:1.5rem; padding-bottom:1rem;}</style>",
+    unsafe_allow_html=True,
+)
 
 # menu = ["Home", "Login", "SignUp", "설문참여",]
 menu = ["Home", "Login", "SignUp", "설문참여", "pythonid", "블록리게임", "테트리스게임"]
@@ -55,26 +97,14 @@ elif choice == "Login":
                 st.error("ID 또는 비밀번호가 틀렸습니다.")
 
 elif choice == "pythonid":
-    st.title("📝 파이썬 학습")
-    components.html(
-    # '<iframe style="border:1px #FFFFFF none" src="https://www.online-python.com/" title="iFrame" width="100%" height="600px" scrolling="no" frameborder="no" allow="fullscreen"></iframe>'
-    # '<iframe style="border:1px #FFFFFF none" src="https://www.online-python.com/" title="iFrame" width="100%" height="100%" scrolling="no" frameborder="no" allow="fullscreen"></iframe>'
-      '<iframe style="border:1px #FFFFFF none" src="https://www.online-python.com/" title="iFrame" width="100%" height="1800px" scrolling="yes" frameborder="no" allow="fullscreen"></iframe>', height=820
-                   )
+    game_page("📝 파이썬 학습", "https://www.online-python.com/", "python")
 
 elif choice == "블록리게임":
-    st.title("📝 블록리게임")
-    components.html(
-    # '<iframe style="border:1px #FFFFFF none" src="https://www.online-python.com/" title="iFrame" width="100%" height="100%" scrolling="no" frameborder="no" allow="fullscreen"></iframe>'
-      '<iframe style="border:1px #FFFFFF none" src="https://blockly.games/?lang=ko" title="iFrame" width="100%" height="1800px" scrolling="yes" frameborder="no" allow="fullscreen"></iframe>', height=820
-                   )
+    game_page("🧩 블록리게임", "https://blockly.games/?lang=ko", "blockly")
 
 elif choice == "테트리스게임":
-    st.title("📝 테트리스게임")
-    components.html(
-    # '<iframe style="border:1px #FFFFFF none" src="https://www.online-python.com/" title="iFrame" width="100%" height="100%" scrolling="no" frameborder="no" allow="fullscreen"></iframe>'
-      '<iframe style="border:1px #FFFFFF none" src="https://play.tetris.com/" title="iFrame" width="100%" height="1800px" scrolling="yes" frameborder="no" allow="fullscreen"></iframe>', height=820
-                   )
+    game_page("🎮 테트리스게임", "https://play.tetris.com/", "tetris")
+
 
 elif choice == "설문참여":
     st.title("📝 AI의 교육적 효과에 대한 인식 설문조사")
